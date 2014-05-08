@@ -16,7 +16,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 package 'util-linux'
-package 'device-mapper'
-package 'cryptsetup-luks'
+
+case node[:platform_family]
+when 'debian'
+  package 'dmsetup'
+  package 'cryptsetup'
+when 'rhel', 'fedora'
+  package 'device-mapper'
+  package 'cryptsetup-luks'
+end
+

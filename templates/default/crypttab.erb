@@ -1,3 +1,0 @@
-<% node['luks']['devices'].each do |device, details| %>
-<%= details[:luks_name] %>  <%= device %>  <%= details[:key_file] || 'none' %>
-<% end %>

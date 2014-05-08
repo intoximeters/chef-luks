@@ -1,19 +1,23 @@
 ---
-driver_plugin: vagrant
-driver_config:
-  require_chef_omnibus: true
+driver:
+  name: vagrant
+
+provisioner:
+  name: chef_zero
+  data_bags_path: ./test/data_bags
 
 platforms:
-- name: centos-6.4
-  driver_config:
-    box: opscode-centos-6.4
-    box_url: https://opscode-vm.s3.amazonaws.com/vagrant/opscode_centos-6.4_provisionerless.box
+#  - name: centos-6.5
+#    driver:
+#      vm_hostname: localhost
+  - name: ubuntu-14.04
+    driver:
+      vm_hostname: localhost
+
 
 suites:
-- name: default
-  encrypted_data_bag_secret_key_path: ./test_encyrpted_data_bag_secret
-  run_list:
-  - recipe[minitest-handler]
-  - recipe[luks]
-  - recipe[luks_test]
-  attributes: {}
+  - name: default
+    encrypted_data_bag_secret_key_path: ./test_encyrpted_data_bag_secret
+    run_list:
+      - recipe[luks_test]
+    attributes: {}

@@ -1,4 +1,5 @@
 .vagrant
+.project
 Berksfile.lock
 *~
 *#

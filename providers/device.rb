@@ -16,15 +16,51 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+include CryptSetup
+include CryptTab
 
-class Chef::Exceptions::LUKS < RuntimeError; end
-
-action :create do
-  if @current_resource.exists
-    Chef::Log.info "#{@new_resource} already exists - nothing to do."
+action :enable do
+  if @current_resource.enabled
+    Chef::Log.info "#{@new_resource} is already enabled - nothing to do."
   else
-    converge_by("Create #{@new_resource}") do
-      luks_format_device
+    converge_by("Enabling #{@new_resource}") do
+      crypttab_enable(
+        @run_context.node[:luks][:crypttab_path],
+        new_resource.block_device,
+        new_resource.luks_name,
+        new_resource.key_file,
+        new_resource.key_slot
+      )
+    end
+  end
+end
+
+action :open do
+  if @current_resource.opened
+    Chef::Log.info "#{@new_resource} is already open - nothing to do."
+  else
+    action_format
+    converge_by("Opening #{@new_resource}") do
+      cryptsetup_device_open(
+        new_resource.block_device,
+        new_resource.luks_name,
+        new_resource.key_file,
+        new_resource.key_slot
+      )
+    end
+  end
+end
+
+action :format do
+  if @current_resource.formatted
+    Chef::Log.info "#{@new_resource} is already formatted - nothing to do."
+  else
+    converge_by("Formatting #{@new_resource}") do
+      cryptsetup_device_format(
+        new_resource.block_device,
+        new_resource.key_file,
+        new_resource.key_slot
+      )
     end
   end
 end
@@ -35,46 +71,21 @@ end
 
 def load_current_resource
   @current_resource = Chef::Resource::LuksDevice.new(@new_resource.name)
+  @current_resource.block_device(@new_resource.block_device)
   @current_resource.key_file(@new_resource.key_file)
+  @current_resource.luks_name(@new_resource.luks_name)
 
-  if is_luks_device? @current_resource.block_device
-    @current_resource.exists = true
+  if cryptsetup_device_formatted? @current_resource.block_device
+    @current_resource.formatted = true
+    
+    if cryptsetup_device_opened? @current_resource.luks_name
+      @current_resource.opened = true
+    end
   end
-end
-
-def is_luks_device?(block_device)
-  cmd = Mixlib::ShellOut.new(
-    '/sbin/cryptsetup', 'isLuks', block_device
-    ).run_command
-
-  cmd.exitstatus == 0
-end
-
-def append_to_crypttab(block_device, luks_name, key_file, options={})
-  ::File.open('/etc/crypttab', 'a') do |crypttab|
-    crypttab.puts("#{luks_name}\t#{block_device}\t#{key_file}")
-  end
-end
-
-def luks_open_device
-  cmd = Mixlib::ShellOut.new(
-    '/sbin/cryptsetup', '-q', '-d', new_resource.key_file, 'luksOpen',
-    new_resource.block_device, new_resource.luks_name).run_command
-
-  raise Chef::Exceptions::LUKS.new cmd.stderr if cmd.exitstatus != 0
-
-  append_to_crypttab new_resource.block_device,
-    new_resource.luks_name, new_resource.key_file
-end
-
-def luks_format_device
-  cmd = Mixlib::ShellOut.new(
-    '/sbin/cryptsetup', '-q', 'luksFormat',
-    new_resource.block_device, new_resource.key_file).run_command
-
-  if cmd.exitstatus == 0
-    luks_open_device
-  else
-    raise Chef::Exceptions::LUKS.new cmd.stderr
-  end
+  @current_resource.enabled = crypttab_enabled?(
+    @run_context.node[:luks][:crypttab_path],
+    @current_resource.block_device,
+    @current_resource.luks_name,
+    @current_resource.key_file
+  )
 end

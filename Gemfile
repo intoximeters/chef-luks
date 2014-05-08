@@ -1,8 +1,17 @@
 source 'https://rubygems.org'
 
 gem 'rake'
-gem 'berkshelf'
-gem 'test-kitchen', :group => :integration
-gem 'kitchen-vagrant', :group => :integration
-gem 'chefspec'
-gem 'foodcritic'
+gem 'berkshelf', '~> 3.1'
+
+group :development do
+  gem 'foodcritic'
+  gem 'thor-foodcritic'
+  gem 'test-kitchen'
+  gem 'kitchen-vagrant'
+  gem 'chefspec'
+  gem 'guard'
+  gem 'guard-kitchen'
+  gem 'guard-foodcritic'
+  gem 'guard-rspec'
+  gem 'guard-bundler'
+end
