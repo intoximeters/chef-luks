@@ -9,8 +9,14 @@
   cryptsetup isLuks /dev/loop0
 }
 
+@test "LUKS volume does not exist at /dev/loop1" {
+  run cryptsetup isLuks /dev/loop1
+  [ "$status" -eq 1 ]
+}
+
 @test "/etc/crypttab was updated" {
   [ $(grep '^luks-test' /etc/crypttab | wc -l) -eq "1" ]
+  [ $(grep '^luks-delete-test' /etc/crypttab | wc -l) -eq "0" ]
 }
 
 @test "/etc/fstab was updated" {
