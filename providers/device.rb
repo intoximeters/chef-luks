@@ -29,6 +29,16 @@ action :create do
   end
 end
 
+action :delete do
+  if @current_resource.exists
+    converge_by("Delete #{@new_resource}") do
+      luks_delete_device
+    end
+  else
+    Chef::Log.info "#{@new_resource} doesn't exist - nothing to do."
+  end
+end
+
 def whyrun_supported?
   true
 end
@@ -56,6 +66,18 @@ def append_to_crypttab(block_device, luks_name, key_file, options={})
   end
 end
 
+def remove_from_crypttab(luks_name, options={})
+  ::File.open('/etc/crypttab', 'r+') do  |crypttab|
+    filtered_crypttab_lines = crypttab.readlines.find_all { |line| line.index(new_resource.luks_name) != 0}
+    crypttab.rewind
+    filtered_crypttab_lines.each do |fline|
+      crypttab.write fline
+    end
+    crypttab.flush
+    crypttab.truncate(crypttab.pos)
+  end
+end
+
 def luks_open_device
   cmd = Mixlib::ShellOut.new(
     '/sbin/cryptsetup', '-q', '-d', new_resource.key_file, 'luksOpen',
@@ -67,6 +89,14 @@ def luks_open_device
     new_resource.luks_name, new_resource.key_file
 end
 
+def luks_close_device
+  cmd = Mixlib::ShellOut.new(
+    '/sbin/cryptsetup', 'luksClose', new_resource.luks_name).run_command
+  raise Chef::Exceptions::LUKS.new cmd.stderr if cmd.exitstatus != 0
+  cmd.exitstatus == 0
+end
+
+
 def luks_format_device
   cmd = Mixlib::ShellOut.new(
     '/sbin/cryptsetup', '-q', 'luksFormat',
@@ -76,5 +106,25 @@ def luks_format_device
     luks_open_device
   else
     raise Chef::Exceptions::LUKS.new cmd.stderr
+  end
+end
+
+def luks_delete_device
+  if(luks_close_device)
+    luks_destroy_header
+    remove_from_crypttab new_resource.block_device
+  end
+end
+
+def luks_destroy_header
+
+  ::File.open('/dev/urandom', 'r') do |randombytes|
+    ::File.open(new_resource.block_device, "r+") do |block_device|
+      totalbytes = 10 * (1024 ** 2)
+      while(block_device.pos < totalbytes)
+        Chef::Log.debug "%.2f percent complete\n" %  ((block_device.pos.to_f / totalbytes) * 100)
+        block_device.write randombytes.read(4096)
+      end
+    end
   end
 end
