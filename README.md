@@ -1,24 +1,3 @@
 luks Cookbook
 =============
-
-**NOTE** This cookbook is in its very early stages and is not ready for 
-production. Please proceed with caution
-
-Requirements
-------------
-
-Attributes
-----------
-
-Contributing
-------------
-1. Fork the repository on Github
-2. Create a named feature branch (like `add_component_x`)
-3. Write you change
-4. Write tests for your change (if applicable)
-5. Run the tests, ensuring they all pass
-6. Submit a Pull Request using Github
-
-License and Authors
--------------------
-Authors: Andrew Williams (williams.andrew@gmail.com)
+This cookbook is no longer maintained and will be deleted a year from now on 11/12/19.
